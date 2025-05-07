@@ -11,6 +11,8 @@ from aiogram import Bot, Dispatcher
 
 # Импорты связанные с фалами проекта 
 from app.user_private import user_private_router
+from common.bot_cmds_list import private
+
 # Код файла 
 
 bot = Bot(os.getenv('TOKEN'))
@@ -22,6 +24,7 @@ dp.include_router(user_private_router)
 async def main():
     # Очистим вебхуки и установим команды бота
     await bot.delete_webhook(drop_pending_updates=True)
+    await bot.set_my_commands(commands=private)
 
     # Запускаем бот
     await dp.start_polling(bot)
