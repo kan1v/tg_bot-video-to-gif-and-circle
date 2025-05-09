@@ -4,5 +4,11 @@ from aiogram.types import BotCommand
 private = [
     BotCommand(command='/start', description='Старт общения с ботом'),
     BotCommand(command='/gif', description='Преобразование видео в GIF'),
-    BotCommand(command='/videotocircle', description='Видео преобразованое в кружочек')
+    BotCommand(command='/circle', description='Видео преобразованое в кружочек'),
+    BotCommand(command='/sticker', description='Создание webm файла'),
+    BotCommand(command='/gifwebm', description='Создание из gif - webm файл'),
+    BotCommand(command='/imagetowebm', description='Создание из картинки - webm файл для стикеров'),
+    BotCommand(command='/resizeimage', description='Изменение разрешения для картинки'),
+    
+    
 ]
