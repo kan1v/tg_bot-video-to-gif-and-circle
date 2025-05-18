@@ -15,6 +15,7 @@ startkbd.add(
     KeyboardButton(text='🎞 Конвертировать gif в webm'),
     KeyboardButton(text='🖼 Конвертировать изображение в webm'),
     KeyboardButton(text='🖼 Сжать изображение'),
+    KeyboardButton(text='🎥 Скачать Tik Tok видео'),
     KeyboardButton(text='Отмена действия')
 )
 

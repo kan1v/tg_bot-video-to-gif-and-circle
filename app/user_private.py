@@ -38,6 +38,9 @@ import os
 # Импорты связанные с файлами проекта 
 from kbds.reply import del_kbd, startkbd
 
+# Импорты связанные с скачиванием видео из тик тока
+from yt_dlp import YoutubeDL
+
 user_private_router = Router()
 
 # Обработчик команды start 
@@ -563,4 +566,70 @@ async def resize_image(message: types.Message, state: FSMContext):
     await state.clear()
 
 
+# Состояние для FSM
+class TikTokDownloader(StatesGroup):
+    url = State()
 
+# Хендлер для команды или кнопки
+@user_private_router.message(or_f(Command('/downloadtiktokvideo'), F.text.lower() == "🎥 скачать tik tok видео"))
+async def start_tiktok_download(message: types.Message, state: FSMContext):
+    await state.set_state(TikTokDownloader.url)
+    await message.answer("Пожалуйста, отправьте ссылку для скачивания видео из TikTok без водяного знака.")
+    logging.info("Ожидание ссылки для скачивания TikTok видео.")
+
+# Хендлер для получения ссылки
+@user_private_router.message(TikTokDownloader.url)
+async def download_tiktok_video(message: types.Message, bot: Bot, state: FSMContext):
+    url = message.text.strip()
+
+    if not url.startswith("https://vm.tiktok.com/"):
+        await message.answer("Пожалуйста, отправьте корректную ссылку на видео из TikTok.")
+        return
+
+    # Уведомляем пользователя о начале загрузки
+    await message.answer("Видео загружается, пожалуйста подождите...")
+    logging.info(f"Получена ссылка: {url}. Начало загрузки видео.")
+
+    video_path = None
+    try:
+        # Настройка yt-dlp для загрузки видео
+        ydl_opts = {
+            'outtmpl': 'tiktok_%(id)s.%(ext)s',
+            'format': 'mp4',
+            'quiet': True,
+            'noplaylist': True,
+            'extractor_args': {
+                'tiktok': {'no_watermark': True}
+            }
+        }
+        with YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=True)
+            video_path = ydl.prepare_filename(info)
+
+        # Проверяем, что файл успешно загружен
+        if not os.path.exists(video_path):
+            raise FileNotFoundError(f"Файл {video_path} не найден после загрузки.")
+
+        # Отправляем видео пользователю
+        video_file = FSInputFile(video_path)
+        await bot.send_video(chat_id=message.chat.id, video=video_file, caption="Вот ваше видео из TikTok без водяного знака!")
+        logging.info("Видео успешно отправлено пользователю.")
+        
+    except Exception as e:
+        error_message = str(e)
+        logging.error(f"Ошибка при скачивании или отправке видео: {error_message}")
+
+        # Проверка на защищённое видео
+        if "Log in for access" in error_message:
+            await message.answer("Это видео защищено, и его невозможно скачать без авторизации. Попробуйте другое видео.")
+        else:
+            await message.answer("Не удалось скачать видео. Попробуйте позже или проверьте ссылку.")
+    
+    finally:
+        # Удаляем файл после отправки, если он существует
+        if video_path and os.path.exists(video_path):
+            os.remove(video_path)
+            logging.info(f"Видео {video_path} удалено с сервера.")
+    
+    # Завершаем состояние
+    await state.clear()
