@@ -43,6 +43,16 @@ from yt_dlp import YoutubeDL
 
 user_private_router = Router()
 
+@user_private_router.message(F.text == "❌ Отмена")
+async def cancel_handler(message: types.Message, state: FSMContext):
+    current_state = await state.get_state()
+    if current_state is None:
+        await message.answer("Нет активных действий для отмены.")
+        return
+
+    await state.clear()
+    await message.answer("Действие отменено.")
+
 # Обработчик команды start 
 @user_private_router.message(CommandStart())
 async def start_cmd(message:types.Message):
@@ -76,8 +86,8 @@ logging.basicConfig(level=logging.INFO)
 @user_private_router.message(or_f(Command('/gif'), F.text.lower() == "📄 конвертировать в gif"))
 async def get_video_for_circle(message: types.Message, state: FSMContext):
     await state.set_state(VideoToGif.video)
-    await message.answer('Пожалуйста отправьте видео для конвертации в кружочек')
-    logging.info("Запрос на отправку видео для конвертации в кружочек.")
+    await message.answer('Пожалуйста отправьте видео для конвертации в GIF')
+    logging.info("Запрос на отправку видео для конвертации в GIF.")
 
 
 @user_private_router.message(VideoToGif.video)
@@ -96,7 +106,7 @@ async def process_video_circle(message: types.Message, bot, state: FSMContext):
     await bot.download_file(file_info.file_path, video_path)
 
     try:
-        await message.answer("⏳ Обрабатываю видео...")
+        await message.answer("⏳ Обрабатываю видео... Может занять некоторое время")
 
         # Загружаем видео
         clip = VideoFileClip(video_path)
@@ -633,3 +643,77 @@ async def download_tiktok_video(message: types.Message, bot: Bot, state: FSMCont
     
     # Завершаем состояние
     await state.clear()
+
+
+class CircleToVideoMessage(StatesGroup):
+    circle_video = State()
+
+@user_private_router.message(or_f(Command('/circle2video'), F.text.lower() == "🎥 кружочек в обычное видео"))
+async def get_circle_video(message: types.Message, state: FSMContext):
+    await state.set_state(CircleToVideoMessage.circle_video)
+    await message.answer('Пожалуйста, отправьте видео-кружочек для преобразования в обычное видео.')
+    logging.info("Запрос на отправку видео-кружочка для преобразования.")
+
+@user_private_router.message(CircleToVideoMessage.circle_video)
+async def process_circle_to_video(message: types.Message, bot: Bot, state: FSMContext):
+    video_note = message.video_note
+    if not video_note:
+        await message.answer("Пожалуйста, отправьте видео-кружочек (video_note).")
+        return
+
+    # Проверка FFmpeg
+    if not shutil.which("ffmpeg"):
+        await message.answer("Ошибка: FFmpeg не установлен или не найден в PATH.")
+        return
+
+    # Пути для временных файлов
+    file_info = await bot.get_file(video_note.file_id)
+    os.makedirs("temp", exist_ok=True)
+    input_path = os.path.join("temp", f"{video_note.file_id}.mp4")
+    output_path = os.path.join("temp", f"{video_note.file_id}_normal.mp4")
+
+    # Скачиваем видео-кружочек
+    await bot.download_file(file_info.file_path, input_path)
+
+    try:
+        await message.answer("⏳ Обрабатываю видео-кружочек...")
+
+        command = [
+            "ffmpeg",
+            "-i", input_path,
+            "-vf", "format=yuv420p, crop='iw*0.707':'ih*0.707':'iw*0.1465':'ih*0.1465', scale=640:640",
+            "-c:v", "libx264",
+            "-crf", "14",               # Качество почти без потерь
+            "-preset", "veryslow",      # Максимальное качество, минимальный размер
+            "-c:a", "copy",             # Звук не перекодируем
+            "-vsync", "0",
+            "-map", "0",
+            "-y",
+            output_path
+        ]
+
+
+        subprocess.run(command, check=True, stderr=subprocess.PIPE, text=True)
+
+        # Отправляем обратно как обычное видео
+        await message.answer_video(
+            video=types.FSInputFile(output_path),
+            caption="Ваше обычное видео готово! 🎥"
+        )
+
+    except subprocess.CalledProcessError as e:
+        logging.error(f"FFmpeg error: {e.stderr}")
+        await message.answer(f"Произошла ошибка при обработке видео: {e.stderr}")
+    except Exception as e:
+        logging.error(f"Ошибка: {e}")
+        await message.answer(f"Произошла ошибка: {e}")
+    finally:
+        # Очистка временных файлов
+        if os.path.exists("temp"):
+            shutil.rmtree("temp")
+
+    # Сброс состояния
+    await state.clear()
+
+
+

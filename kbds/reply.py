@@ -10,13 +10,15 @@ startkbd = ReplyKeyboardBuilder()
 
 startkbd.add(
     KeyboardButton(text="🎥 Конвертировать в кружочек"),
+    KeyboardButton(text='🎥 Кружочек в обычное видео'),
     KeyboardButton(text="📄 Конвертировать в GIF"),
     KeyboardButton(text="🎞 Конвертировать в webm"),
     KeyboardButton(text='🎞 Конвертировать gif в webm'),
     KeyboardButton(text='🖼 Конвертировать изображение в webm'),
     KeyboardButton(text='🖼 Сжать изображение'),
     KeyboardButton(text='🎥 Скачать Tik Tok видео'),
-    KeyboardButton(text='Отмена действия')
+    KeyboardButton(text='❌ Отмена')
 )
 
-startkbd.adjust(1,1,2,1,1)
+startkbd.adjust(2,1,2,1)
+

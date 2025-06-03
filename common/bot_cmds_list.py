@@ -9,7 +9,8 @@ private = [
     BotCommand(command='/gifwebm', description='Создание из gif - webm файл'),
     BotCommand(command='/imagetowebm', description='Создание из картинки - webm файл для стикеров'),
     BotCommand(command='/resizeimage', description='Изменение разрешения для картинки'),
-    BotCommand(command='downloadvideotiktok', description='Скачивание видео из тт без водяного знака')
+    BotCommand(command='downloadvideotiktok', description='Скачивание видео из тт без водяного знака'),
+    BotCommand(command='circle2video', description='Сделать из кружочка обычное видео')
     
     
 ]
